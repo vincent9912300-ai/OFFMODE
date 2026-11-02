@@ -139,7 +139,7 @@ try {
   // right half = girl pick (no gender text — only the visual highlight)
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 992, y: 450, button: 'left', buttons: 1, clickCount: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 992, y: 450, button: 'left', buttons: 0, clickCount: 1 });
-  await sleep(800);
+  await sleep(1400);
   const girl = await send('Page.captureScreenshot', { format: 'png' });
   writeFileSync('.shots/select-girl.png', Buffer.from(girl.result.data, 'base64'));
   console.log('select-girl.png ok');
@@ -147,10 +147,63 @@ try {
   // left half = boy pick
   await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 400, y: 450, button: 'left', buttons: 1, clickCount: 1 });
   await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 400, y: 450, button: 'left', buttons: 0, clickCount: 1 });
-  await sleep(800);
+  await sleep(1400);
   const boy = await send('Page.captureScreenshot', { format: 'png' });
   writeFileSync('.shots/select-boy.png', Buffer.from(boy.result.data, 'base64'));
   console.log('select-boy.png ok');
+
+  // --- geometry probes: the select layer must always cover the viewport
+  // (a straight edge = a sibling layer slicing the circle) and the spring
+  // must track scroll back down to a clean hero ---
+  const probe = async (tag) => {
+    const r = await send('Runtime.evaluate', {
+      expression: `(() => {
+        const el = document.getElementById('app-scroll');
+        const sel = document.getElementById('select-screen');
+        const hero = document.getElementById('hero-screen');
+        const rc = sel ? sel.getBoundingClientRect() : null;
+        const cs = sel ? getComputedStyle(sel) : null;
+        const hs = hero ? getComputedStyle(hero) : null;
+        return JSON.stringify({
+          top: el.scrollTop,
+          selTop: rc ? Math.round(rc.top) : null,
+          selBottom: rc ? Math.round(rc.bottom) : null,
+          clip: cs ? cs.clipPath : null,
+          heroOp: hs ? hs.opacity : null,
+          heroFilter: hs ? hs.filter : null,
+        });
+      })()`,
+      returnByValue: true,
+    });
+    console.log(tag, r.result.result.value);
+  };
+
+  await setScroll(0.5);
+  await sleep(1600);
+  await probe('mid:');
+  const midShot = await send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('.shots/wipe-mid.png', Buffer.from(midShot.result.data, 'base64'));
+  console.log('wipe-mid.png ok');
+
+  await setScroll(0);
+  await sleep(2200);
+  await probe('home:');
+  const home = await send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('.shots/home-again.png', Buffer.from(home.result.data, 'base64'));
+  console.log('home-again.png ok');
+
+  // wheel chain from page two must still work (real wheel events)
+  await setScroll(1);
+  await sleep(1400);
+  for (let i = 0; i < 6; i++) {
+    await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 720, y: 450, deltaX: 0, deltaY: -150 });
+    await sleep(100);
+  }
+  await sleep(1600);
+  await probe('wheelUp:');
+  const rev = await send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('.shots/wipe-reverse.png', Buffer.from(rev.result.data, 'base64'));
+  console.log('wipe-reverse.png ok');
   ws.close();
 } catch (err) {
   console.error('failed:', err.message);
