@@ -152,6 +152,36 @@ try {
   writeFileSync('.shots/select-boy.png', Buffer.from(boy.result.data, 'base64'));
   console.log('select-boy.png ok');
 
+  // --- cursor grid: pointer glow must light cells on the background
+  // behind the duo (event bubbles up from the halves), canvas readback ---
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 100, y: 100, buttons: 0 });
+  await sleep(500);
+  const gridProbe = await send('Runtime.evaluate', {
+    expression: `(() => {
+      const canvas = document.querySelector('#select-screen canvas');
+      if (!canvas) return JSON.stringify({ err: 'no grid canvas' });
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const sample = (x, y, w, h) => {
+        const d = ctx.getImageData(x * dpr, y * dpr, w * dpr, h * dpr).data;
+        let lit = 0, maxA = 0;
+        for (let i = 3; i < d.length; i += 4) {
+          if (d[i] > 100) lit++;
+          if (d[i] > maxA) maxA = d[i];
+        }
+        return { lit, maxA };
+      };
+      const near = sample(60, 60, 80, 80);
+      const far = sample(1180, 660, 80, 80);
+      return JSON.stringify({ near, far, w: canvas.width, h: canvas.height });
+    })()`,
+    returnByValue: true,
+  });
+  console.log('grid:', gridProbe.result.result.value);
+  const gridShot = await send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('.shots/select-grid.png', Buffer.from(gridShot.result.data, 'base64'));
+  console.log('select-grid.png ok');
+
   // --- geometry probes: the select layer must always cover the viewport
   // (a straight edge = a sibling layer slicing the circle) and the spring
   // must track scroll back down to a clean hero ---

@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "./animations.css";
 
+:root {
+  --background: 0 0% 4%;
+  --foreground: 0 0% 96%;
+  --primary: 48 100% 50%;
+  --primary-foreground: 0 0% 4%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 64%;
+  --border: 0 0% 18%;
+}
+
 @theme {
   --font-display: "Anton", "Archivo Black", "Arial Black", sans-serif;
   --font-sans: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;

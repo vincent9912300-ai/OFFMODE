@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { AnimatePresence, motion, useTransform, type MotionValue } from 'framer-motion';
+import { CursorGrid } from '@/components/ui/cursor-grid';
 import duoImg from '../assets/duo-cyberpunk.png';
 
 interface SelectScreenProps {
@@ -39,6 +40,23 @@ export default function SelectScreen({ smooth, reduced }: SelectScreenProps) {
   );
 
   const [pick, setPick] = useState<Side | null>(null);
+
+  // The duo halves sit above the grid canvas, so their pointer events are
+  // forwarded to the grid root (React listens at the document root, and the
+  // dispatched event bubbles through it). A leave becomes a far-off move —
+  // strength() is 0 beyond the radius, which clears the glow the same way.
+  const forwardToGrid = (type: 'pointermove' | 'pointerdown' | 'pointerleave', e: ReactPointerEvent<HTMLDivElement>) => {
+    const grid = document.getElementById('cursor-grid');
+    if (!grid) return;
+    const far = type === 'pointerleave';
+    grid.dispatchEvent(
+      new PointerEvent(far ? 'pointermove' : type, {
+        clientX: far ? -9999 : e.clientX,
+        clientY: far ? -9999 : e.clientY,
+        bubbles: true,
+      }),
+    );
+  };
 
   const half = (side: Side) => {
     const selected = pick === side;
@@ -84,11 +102,24 @@ export default function SelectScreen({ smooth, reduced }: SelectScreenProps) {
         style={{ opacity: contentOpacity, y: contentY, filter: contentBlur, pointerEvents: contentPointer }}
         className="absolute inset-0"
       >
+        {/* interactive pixel grid: painted first so the glow lives on the
+            background only — the duo (transparent PNG) covers it where the
+            characters are; events over the halves are forwarded to it */}
+        <CursorGrid
+          color="hsl(var(--primary))"
+          cellSize={25}
+          radius={150}
+          id="cursor-grid"
+        />
+
         {/* duo — full-bleed inside a 20px frame: fills the viewport height
             with a 20px breather from every edge/corner, sides crop on wide
             screens, width-fit on small ones */}
         <div
           id="duo-frame"
+          onPointerMove={(e) => forwardToGrid('pointermove', e)}
+          onPointerDown={(e) => forwardToGrid('pointerdown', e)}
+          onPointerLeave={(e) => forwardToGrid('pointerleave', e)}
           className="absolute inset-5 flex items-center justify-center overflow-hidden"
         >
           <div className="relative aspect-[1672/941] h-full w-auto max-md:h-auto max-md:w-full">
@@ -102,7 +133,7 @@ export default function SelectScreen({ smooth, reduced }: SelectScreenProps) {
             right of her half, boy → top left of his half) */}
         <div
           className={[
-            'absolute top-5 z-30 md:top-8',
+            'pointer-events-none absolute top-5 z-30 md:top-8',
             pick === 'right'
               ? 'right-5 md:right-12'
               : 'left-5 md:left-12',
@@ -138,7 +169,7 @@ export default function SelectScreen({ smooth, reduced }: SelectScreenProps) {
         </div>
 
         {/* WEAR YOUR MOOD — white 60 / yellow 40, right corner */}
-        <div className="absolute bottom-10 right-8 z-20 select-none text-right md:bottom-14 md:right-14">
+        <div className="pointer-events-none absolute bottom-10 right-8 z-20 select-none text-right md:bottom-14 md:right-14">
           <p className="font-display uppercase leading-[0.88] -skew-x-6">
             <span className="block text-[clamp(1.75rem,4.4vw,4rem)] text-white">
               WEAR YOUR
