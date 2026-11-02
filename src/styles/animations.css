@@ -2,6 +2,15 @@
 /* OFFMODE — decorative keyframes & component styles                    */
 /* ------------------------------------------------------------------ */
 
+/* scroll container for the yellow → matte-black wipe: no visible bar */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* WebGL-unavailable fallback: liquid silver blobs in pure CSS */
 .css-blob {
   position: absolute;

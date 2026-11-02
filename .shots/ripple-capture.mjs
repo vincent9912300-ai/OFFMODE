@@ -117,6 +117,40 @@ try {
   const settled = await send('Page.captureScreenshot', { format: 'png' });
   writeFileSync('.shots/ripple-settled.png', Buffer.from(settled.result.data, 'base64'));
   console.log('ripple-settled.png ok');
+
+  // --- yellow -> matte-black round wipe (scroll driven) ---
+  const setScroll = (frac) =>
+    send('Runtime.evaluate', {
+      expression: `(() => { const el = document.getElementById('app-scroll'); el.scrollTop = Math.round((el.scrollHeight - el.clientHeight) * ${frac}); })()`,
+    });
+
+  await setScroll(0.5);
+  await sleep(1200); // let the spring settle
+  const mid = await send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('.shots/wipe-mid.png', Buffer.from(mid.result.data, 'base64'));
+  console.log('wipe-mid.png ok');
+
+  await setScroll(1);
+  await sleep(1600);
+  const screen2 = await send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('.shots/select-screen.png', Buffer.from(screen2.result.data, 'base64'));
+  console.log('select-screen.png ok');
+
+  // right half = girl pick (no gender text — only the visual highlight)
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 992, y: 450, button: 'left', buttons: 1, clickCount: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 992, y: 450, button: 'left', buttons: 0, clickCount: 1 });
+  await sleep(800);
+  const girl = await send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('.shots/select-girl.png', Buffer.from(girl.result.data, 'base64'));
+  console.log('select-girl.png ok');
+
+  // left half = boy pick
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 400, y: 450, button: 'left', buttons: 1, clickCount: 1 });
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 400, y: 450, button: 'left', buttons: 0, clickCount: 1 });
+  await sleep(800);
+  const boy = await send('Page.captureScreenshot', { format: 'png' });
+  writeFileSync('.shots/select-boy.png', Buffer.from(boy.result.data, 'base64'));
+  console.log('select-boy.png ok');
   ws.close();
 } catch (err) {
   console.error('failed:', err.message);
