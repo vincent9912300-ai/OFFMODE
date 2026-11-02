@@ -84,10 +84,14 @@ export default function SelectScreen({ smooth, reduced }: SelectScreenProps) {
         style={{ opacity: contentOpacity, y: contentY, filter: contentBlur, pointerEvents: contentPointer }}
         className="absolute inset-0"
       >
-        {/* duo — full-bleed: fills the viewport height (no bottom gap),
-            sides crop on wide screens, width-fit on small ones */}
-        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-          <div className="relative aspect-[1672/941] h-full w-auto max-md:h-auto max-md:w-[92vw]">
+        {/* duo — full-bleed inside a 20px frame: fills the viewport height
+            with a 20px breather from every edge/corner, sides crop on wide
+            screens, width-fit on small ones */}
+        <div
+          id="duo-frame"
+          className="absolute inset-5 flex items-center justify-center overflow-hidden"
+        >
+          <div className="relative aspect-[1672/941] h-full w-auto max-md:h-auto max-md:w-full">
             {half('left')}
             {half('right')}
           </div>

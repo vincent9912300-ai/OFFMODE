@@ -162,12 +162,18 @@ try {
         const sel = document.getElementById('select-screen');
         const hero = document.getElementById('hero-screen');
         const rc = sel ? sel.getBoundingClientRect() : null;
+        const duo = document.getElementById('duo-frame');
+        const dc = duo ? duo.getBoundingClientRect() : null;
         const cs = sel ? getComputedStyle(sel) : null;
         const hs = hero ? getComputedStyle(hero) : null;
         return JSON.stringify({
           top: el.scrollTop,
           selTop: rc ? Math.round(rc.top) : null,
           selBottom: rc ? Math.round(rc.bottom) : null,
+          duoTop: dc ? Math.round(dc.top) : null,
+          duoBottom: dc ? Math.round(dc.bottom) : null,
+          duoLeft: dc ? Math.round(dc.left) : null,
+          duoRight: dc ? Math.round(dc.right) : null,
           clip: cs ? cs.clipPath : null,
           heroOp: hs ? hs.opacity : null,
           heroFilter: hs ? hs.filter : null,
