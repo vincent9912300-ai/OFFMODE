@@ -1,15 +1,19 @@
-import { useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { type PointerEvent as ReactPointerEvent } from 'react';
 import { AnimatePresence, motion, useTransform, type MotionValue } from 'framer-motion';
 import { CursorGrid } from '@/components/ui/cursor-grid';
 import duoImg from '../assets/duo-cyberpunk.png';
 
 interface SelectScreenProps {
-  /** spring-smoothed scroll progress 0 → 1, shared with screen one */
+  /** stage-one spring progress 0 → 1 (hero → this screen) */
   smooth: MotionValue<number>;
+  /** stage-two spring progress 0 → 1 (this screen → depth gallery) */
+  s2: MotionValue<number>;
   reduced: boolean;
+  pick: Side | null;
+  onPick: (side: Side) => void;
 }
 
-type Side = 'left' | 'right';
+export type Side = 'left' | 'right';
 
 /**
  * Screen two: revealed by a butter-smooth circular wipe that grows out of
@@ -20,7 +24,7 @@ type Side = 'left' | 'right';
  * by the shared spring, so scrolling back up plays the whole thing in
  * reverse.
  */
-export default function SelectScreen({ smooth, reduced }: SelectScreenProps) {
+export default function SelectScreen({ smooth, s2, reduced, pick, onPick }: SelectScreenProps) {
   const clipPath = useTransform(
     smooth,
     [0, 1],
@@ -33,13 +37,12 @@ export default function SelectScreen({ smooth, reduced }: SelectScreenProps) {
     [0.6, 0.98],
     reduced ? ['blur(0px)', 'blur(0px)'] : ['blur(18px)', 'blur(0px)'],
   );
-  // no hit-testing until the fade actually finished (also keeps the
-  // reverse scroll clean — nothing clickable while the wipe shrinks back)
-  const contentPointer = useTransform(smooth, (v) =>
-    v > 0.97 ? 'auto' : 'none',
+  // no hit-testing until the fade actually finished — and locked out again
+  // the moment the bottom-left gallery wipe starts creeping in (page three
+  // takes over the clicks from there)
+  const contentPointer = useTransform([smooth, s2], ([v1, v2]: number[]) =>
+    v1 > 0.97 && v2 < 0.1 ? 'auto' : 'none',
   );
-
-  const [pick, setPick] = useState<Side | null>(null);
 
   // The duo halves sit above the grid canvas, so their pointer events are
   // forwarded to the grid root (React listens at the document root, and the
@@ -67,7 +70,7 @@ export default function SelectScreen({ smooth, reduced }: SelectScreenProps) {
         type="button"
         aria-label={side === 'left' ? 'Select left character' : 'Select right character'}
         aria-pressed={selected}
-        onClick={() => setPick((p) => (p === side ? null : side))}
+        onClick={() => onPick(side)}
         className={[
           'absolute inset-y-0 w-1/2 cursor-pointer rounded-[1.75rem] transition-all duration-500 ease-out outline-none',
           side === 'left' ? 'left-0 origin-left' : 'right-0 origin-right',

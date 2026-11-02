@@ -5,3 +5,7 @@ dist
 tsconfig.tsbuildinfo
 .shots/*
 !.shots/*.mjs
+
+# reference repos the user dropped in (own git history)
+KineticTypePageTransition/
+a-drift/

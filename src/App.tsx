@@ -3,7 +3,9 @@ import { AnimatePresence, motion, useScroll, useSpring, useTransform } from 'fra
 import Hero from './components/Hero';
 import Navbar from './components/Navbar';
 import LoadingScreen from './components/LoadingScreen';
-import SelectScreen from './components/SelectScreen';
+import SelectScreen, { type Side } from './components/SelectScreen';
+import LookDetail, { type OpenLook } from './components/LookDetail';
+import DepthGallery from './depth/DepthGallery';
 
 const prefersReduced = () =>
   typeof window !== 'undefined' &&
@@ -15,13 +17,29 @@ export default function App() {
     () => typeof window !== 'undefined' && window.innerWidth < 768,
   );
   const [ready, setReady] = useState(false);
+  // character pick lives up here so screen three can show the matching set
+  const [pick, setPick] = useState<Side | null>(null);
+  // kinetic look detail — open when a resting plane is clicked
+  const [openLook, setOpenLook] = useState<OpenLook | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // scroll range for the round yellow → matte-black wipe (screen two)
+  // freeze the gallery underneath while the detail view is open
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (openLook) {
+      el.style.overflowY = 'hidden';
+      return () => {
+        el.style.overflowY = '';
+      };
+    }
+  }, [openLook]);
+
+  // scroll range for the two round wipes (screen two → screen three)
   const { scrollYProgress } = useScroll({ container: scrollRef });
 
-  // one spring shared by both screens so the cross-fade stays perfectly in
-  // sync (and plays identically when the scroll reverses)
+  // one spring shared by all screens so the cross-fades stay perfectly in
+  // sync (and play identically when the scroll reverses)
   const smooth = useSpring(
     scrollYProgress,
     reduced
@@ -29,17 +47,33 @@ export default function App() {
       : { stiffness: 140, damping: 27, mass: 0.65 },
   );
 
+  // stage one (first ~250vh): hero → select — all original ranges kept
+  const s1 = useTransform(smooth, [0, 0.2], [0, 1]);
+  // stage two (rest of ~1000vh): select → depth gallery, wipe from
+  // bottom-left — a long runway so every look gets its own screen of
+  // scroll (checkpoints) and fast flicks can't blast through the stack
+  const s2 = useTransform(smooth, [0.2, 1], [0, 1]);
+
   // screen one: fades + blurs out while the black circle grows over it
-  const heroOpacity = useTransform(smooth, [0.1, 0.62], [1, 0]);
+  const heroOpacity = useTransform(s1, [0.1, 0.62], [1, 0]);
   const heroFilter = useTransform(
-    smooth,
+    s1,
     [0.1, 0.62],
     reduced ? ['blur(0px)', 'blur(0px)'] : ['blur(0px)', 'blur(16px)'],
   );
-  const heroScale = useTransform(smooth, [0, 0.62], reduced ? [1, 1] : [1, 1.06]);
-  const heroPointer = useTransform(smooth, (v) =>
+  const heroScale = useTransform(s1, [0, 0.62], reduced ? [1, 1] : [1, 1.06]);
+  const heroPointer = useTransform(s1, (v) =>
     v > 0.55 ? 'none' : 'auto',
   );
+
+  const handlePick = (side: Side) =>
+    setPick((p) => (p === side ? null : side));
+
+  // headless verification hook: raw + spring-smoothed scroll progress
+  (globalThis as Record<string, unknown>).__scroll = {
+    raw: scrollYProgress,
+    smooth,
+  };
 
   // if the viewport crosses the lite threshold mid-session, reload the pass
   useEffect(() => {
@@ -61,8 +95,8 @@ export default function App() {
         ready ? 'overflow-y-auto' : 'overflow-hidden'
       }`}
     >
-      {/* two screens of scroll: 100vh of wipe */}
-      <div className="relative h-[200vh]">
+      {/* four screens of scroll: hero → select wipe, select → gallery wipe */}
+      <div className="relative h-[1250vh]">
         {/* ONE sticky screen holding both layers: they always share the
             exact viewport rect, so the wipe circle anchors to the bottom-
             right corner at every scroll position (a second sticky sibling
@@ -96,8 +130,35 @@ export default function App() {
           </motion.div>
 
           {/* screen two — round wipe from the bottom-right corner */}
-          <SelectScreen smooth={smooth} reduced={reduced} />
+          <SelectScreen
+            smooth={s1}
+            s2={s2}
+            reduced={reduced}
+            pick={pick}
+            onPick={handlePick}
+          />
+
+          {/* screen three — Codrops depth gallery, wipe out of the
+              bottom-left corner, showing the picked character's set */}
+          <DepthGallery
+            s2={s2}
+            set={pick === 'left' ? 'boy' : pick === 'right' ? 'girl' : 'duo'}
+            reduced={reduced}
+            onOpenLook={setOpenLook}
+          />
         </div>
+
+        {/* kinetic look detail — overlays everything, reverses on close */}
+        <AnimatePresence>
+          {openLook && (
+            <LookDetail
+              key={openLook.src}
+              look={openLook}
+              reduced={reduced}
+              onClose={() => setOpenLook(null)}
+            />
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {!ready && (
