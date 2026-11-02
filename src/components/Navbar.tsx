@@ -38,7 +38,11 @@ export default function Navbar({ ready, reduced }: NavbarProps) {
 
   return (
     <>
-      <header ref={headerRef} className="fixed inset-x-0 top-0 z-40" style={{ opacity: 0 }}>
+      <header
+        ref={headerRef}
+        className="fixed inset-x-0 top-0 z-40 shadow-[0_14px_40px_-18px_rgba(40,30,0,0.5)]"
+        style={{ opacity: 0 }}
+      >
         <nav
           className="flex items-center justify-between border-b border-black/15 px-5 pb-4 pt-5 md:px-10"
           aria-label="Main"

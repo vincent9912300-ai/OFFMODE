@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import Hero from './components/Hero';
 import Navbar from './components/Navbar';
 import LoadingScreen from './components/LoadingScreen';
-import CustomCursor from './components/CustomCursor';
 
 const prefersReduced = () =>
   typeof window !== 'undefined' &&
@@ -34,8 +33,6 @@ export default function App() {
 
       <Hero ready={ready} reduced={reduced} lite={lite} />
 
-      <CustomCursor />
-
       <AnimatePresence>
         {!ready && (
           <motion.div
@@ -48,12 +45,12 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* tagline sits low-right — one small editorial accent, nothing more */}
+      {/* tagline sits low-left — one small editorial accent, nothing more */}
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: ready && !reduced ? 1 : 0 }}
         transition={{ delay: 1.9, duration: 0.8 }}
-        className="pointer-events-none absolute bottom-6 right-6 z-30 hidden text-right font-sans text-[10px] leading-relaxed tracking-[0.35em] md:block"
+        className="pointer-events-none absolute bottom-6 left-6 z-30 hidden text-left font-sans text-[10px] leading-relaxed tracking-[0.35em] md:block"
       >
         WEAR YOUR MOOD
         <span className="mt-1 block opacity-50">FW26 / SYSTEM:OFFMODE</span>

@@ -9,9 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/archivo-black": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
     "@react-three/fiber": "^9.1.2",
     "framer-motion": "^12.15.0",
     "gsap": "^3.13.0",
+    "liquid-ripple": "^0.1.1",
     "lucide-react": "^0.510.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

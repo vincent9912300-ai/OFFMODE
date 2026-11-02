@@ -2,7 +2,7 @@
 @import "./animations.css";
 
 @theme {
-  --font-display: "Archivo Black", "Arial Black", "Helvetica Neue", sans-serif;
+  --font-display: "Anton", "Archivo Black", "Arial Black", sans-serif;
   --font-sans: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
   --color-electric: #ffe500;
   --color-ink: #050505;

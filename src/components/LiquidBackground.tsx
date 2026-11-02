@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { MousePos } from '../hooks/useMousePosition';
+import { TRAIL_MAX, type TrailPool } from '../hooks/usePointerTrail';
 import { gsap } from 'gsap';
 
 /* ------------------------------------------------------------------ */
@@ -23,10 +24,10 @@ precision highp float;
 varying vec2 vUv;
 
 uniform float uTime;   // seconds, frozen for reduced motion
-uniform float uAmp;    // 1 = full motion, 0 = static (reduced motion)
 uniform float uLite;   // 1 = mobile / simplified pass
 uniform vec2  uMouse;  // smoothed normalized pointer, -1..1
 uniform vec2  uRes;    // css pixel size
+uniform vec4  uTrail[16]; // xy = pos (-1..1), z = age (s), w = strength
 
 float hash21(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -34,35 +35,19 @@ float hash21(vec2 p) {
   return fract(p.x * p.y);
 }
 
-float noise(vec2 p) {
-  vec2 i = floor(p);
-  vec2 f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(hash21(i), hash21(i + vec2(1.0, 0.0)), u.x),
-    mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), u.x),
-    u.y
-  );
-}
-
-float fbm(vec2 p) {
-  float v = 0.0;
-  float a = 0.55;
-  for (int i = 0; i < 4; i++) {
-    v += a * noise(p);
-    p = p * 2.03 + vec2(11.3, 7.1);
-    a *= 0.5;
-  }
-  return v;
+float segDist(vec2 p, vec2 a, vec2 b, out float t) {
+  vec2 pa = p - a;
+  vec2 ba = b - a;
+  t = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-7), 0.0, 1.0);
+  return length(pa - ba * t);
 }
 
 void main() {
   float aspect = uRes.x / max(uRes.y, 1.0);
   vec2 uv = vUv;
 
-  // pointer-reactive offset (subtle, lerped on the CPU side)
   vec2 p = (uv - 0.5) * vec2(aspect, 1.0);
-  p += uMouse * vec2(0.035, 0.025);
+  p += uMouse * vec2(0.03, 0.02);
 
   float t = uTime;
   float aa = 1.5 / max(uRes.y, 720.0);
@@ -70,46 +55,7 @@ void main() {
   // electric yellow base (#FFE500)
   vec3 col = vec3(1.0, 0.898, 0.0);
 
-  // dim ribbons toward the horizontal center so the wordmark stays readable
-  float cx = 0.3 + 0.7 * smoothstep(0.10, 0.45, abs(uv.x - 0.5));
-
-  /* ---- flowing black liquid ribbons ---- */
-  for (int i = 0; i < 3; i++) {
-    float fi = float(i);
-    if (uLite > 0.5 && fi > 0.5 && fi < 1.5) continue; // skip middle ribbon on mobile
-
-    float y0 = 0.38 - fi * 0.38; // 0.38 / 0.0 / -0.38
-
-    float yc = y0
-      + (sin(p.x * 1.6 + fi * 2.3 + t * 0.9) * 0.055
-      +  sin(p.x * 2.9 - t * 0.55 + fi * 1.4) * 0.028
-      + (fbm(vec2(p.x * 1.25 + t * 0.32, fi * 3.7)) - 0.5) * 0.24) * uAmp;
-    yc = clamp(yc, -0.46, 0.41); // never crowd the navbar / bottom edge
-
-    float halfW = 0.048 * (0.5 + 0.9 * fbm(vec2(p.x * 2.1 - t * 0.38, fi * 7.3)));
-    float d = abs(p.y - yc);
-
-    float mask = 1.0 - smoothstep(halfW, halfW + aa, d);
-    if (fi > 0.5 && fi < 1.5) {
-      float cy = 0.55 + 0.45 * smoothstep(0.08, 0.26, abs(uv.y - 0.5));
-      mask *= cx * cy;
-    } else {
-      mask *= cx;
-    }
-    if (mask < 0.004) continue;
-
-    // pseudo-chrome shading: bright rims, a top catch-light and a travelling sheen
-    float edge = clamp((p.y - yc) / halfW, -1.0, 1.0);
-    float rim = pow(abs(edge), 7.0);
-    float cup = smoothstep(0.45, 0.95, edge);
-    float sheen = pow(max(sin(p.x * 2.6 - t * 0.9 + fi * 2.1), 0.0), 9.0);
-
-    vec3 lc = mix(vec3(0.015), vec3(0.85, 0.85, 0.83), clamp(rim * 0.55 + cup * 0.35, 0.0, 1.0));
-    col = mix(col, lc, mask);
-    col += mask * sheen * vec3(1.0, 0.99, 0.9) * 0.22;
-  }
-
-  /* ---- small glossy droplets ---- */
+  /* ---- small glossy silver droplets, swept aside by the flow ---- */
   if (uLite < 0.5) {
     for (int j = 0; j < 6; j++) {
       float fj = float(j);
@@ -118,22 +64,81 @@ void main() {
       float sf = hash21(vec2(fj * 7.9, 2.13));
 
       vec2 cp = vec2(
-        (sx - 0.5) * aspect * 0.9 + sin(t * (0.35 + 0.2 * sy) + fj * 2.4) * 0.06,
-        sy * 0.9 - 0.45 + cos(t * 0.5 + fj * 3.1) * 0.05
+        (sx - 0.5) * aspect * 0.9 + sin(t * (0.25 + 0.14 * sy) + fj * 2.4) * 0.05,
+        sy * 0.9 - 0.45 + cos(t * 0.36 + fj * 3.1) * 0.04
       );
-      float r = 0.006 + 0.013 * sf;
 
-      vec2 dp = (p - cp) / vec2(1.0, 1.25); // slight vertical squash for weight
+      // surface-tension push from every live trail point
+      vec2 push = vec2(0.0);
+      for (int k = 0; k < 16; k++) {
+        vec4 tp = uTrail[k];
+        if (tp.w <= 0.001) continue;
+        vec2 tc = tp.xy * vec2(aspect, 1.0) * 0.5;
+        vec2 dv = cp - tc;
+        push += normalize(dv + vec2(1e-4)) * exp(-dot(dv, dv) * 42.0) * exp(-tp.z * 0.7);
+      }
+      cp += push * 0.05;
+
+      float r = 0.006 + 0.013 * sf;
+      vec2 dp = (p - cp) / vec2(1.0, 1.25);
       float dd = length(dp);
       float dm = 1.0 - smoothstep(r, r + aa, dd);
-      col = mix(col, vec3(0.02), dm);
 
-      // tiny specular bead offset toward the upper-left
+      float body = clamp(1.0 - dd / r, 0.0, 1.0);
+      vec3 dc = mix(vec3(0.93, 0.94, 0.96), vec3(0.45, 0.47, 0.52), pow(body, 0.65) * 0.8);
+      col = mix(col, dc, dm);
+
       vec2 hp = (p - (cp - vec2(r * 0.35, r * 0.35))) / vec2(1.0, 1.25);
       float hl = 1.0 - smoothstep(0.0, r * 0.45, length(hp));
-      col += dm * hl * 0.85;
+      col += dm * hl * 0.95;
     }
   }
+
+  /* ---- viscous pointer trail: butter tension along the drag path ----
+     consecutive smoothed points form a continuous smear in drag order;
+     each segment widens and melts as it ages, with a soft cast shadow
+     underneath and a glossy strip on top for depth */
+  float bodyF = 0.0;
+  float gloss = 0.0;
+  float shade = 0.0;
+
+  for (int i = 0; i < 15; i++) {
+    vec4 A = uTrail[i];
+    vec4 B = uTrail[i + 1];
+    if (A.w <= 0.001 || B.w <= 0.001) continue;
+
+    vec2 a = A.xy * vec2(aspect, 1.0) * 0.5;
+    vec2 b = B.xy * vec2(aspect, 1.0) * 0.5;
+    float age = max(A.z, B.z);
+    float str = min(A.w, B.w);
+    float fade = str * (1.0 - smoothstep(2.2, 3.5, age));
+
+    float ti;
+    float d = segDist(p, a, b, ti);
+    float w = 0.042 + age * 0.03;
+    float fall = exp(-(d * d) / (w * w));
+
+    // slow undulation along the drag axis — flowing, not a static line
+    vec2 dir = normalize(b - a + vec2(1e-5));
+    float along = dot(p - a, dir);
+    fall *= 0.84 + 0.16 * sin(along * 8.0 - t * 0.8 + float(i) * 1.9);
+    bodyF = max(bodyF, fall * fade);
+
+    float tg;
+    float dG = segDist(p - vec2(0.010, 0.016), a, b, tg);
+    gloss = max(gloss, exp(-(dG * dG) / (w * w * 0.3)) * fade);
+
+    float ts;
+    float dS = segDist(p - vec2(-0.012, -0.020), a, b, ts);
+    shade = max(shade, exp(-(dS * dS) / (w * w * 1.7)) * fade);
+  }
+
+  // depth stack: cast shadow → smear body → specular strip → tension rim
+  col = mix(col, col * vec3(0.70, 0.64, 0.42), shade * 0.55);
+  col = mix(col, vec3(1.0, 0.965, 0.82), bodyF * 0.4);
+  col += gloss * 0.28;
+  float rim = smoothstep(0.12, 0.45, bodyF) * (1.0 - smoothstep(0.45, 0.85, bodyF));
+  col -= rim * 0.05;
 
   col = clamp(col, 0.0, 1.0);
   gl_FragColor = vec4(col, 1.0);
@@ -165,9 +170,10 @@ interface LiquidPlaneProps {
   reduced: boolean;
   lite: boolean;
   mouseRef: React.MutableRefObject<MousePos>;
+  trail: React.RefObject<TrailPool>;
 }
 
-function LiquidPlane({ reduced, lite, mouseRef }: LiquidPlaneProps) {
+function LiquidPlane({ reduced, lite, mouseRef, trail }: LiquidPlaneProps) {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const targetMouse = useRef(new THREE.Vector2(0, 0));
   const { size } = useThree();
@@ -175,10 +181,15 @@ function LiquidPlane({ reduced, lite, mouseRef }: LiquidPlaneProps) {
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uAmp: { value: reduced ? 0 : 1 },
       uLite: { value: lite ? 1 : 0 },
       uMouse: { value: new THREE.Vector2(0, 0) },
       uRes: { value: new THREE.Vector2(1, 1) },
+      uTrail: {
+        value: Array.from(
+          { length: TRAIL_MAX },
+          () => new THREE.Vector4(0, 0, 999, 0),
+        ),
+      },
     }),
     // uniforms are stable for the lifetime of the plane
     [] , // eslint-disable-line react-hooks/exhaustive-deps
@@ -193,9 +204,17 @@ function LiquidPlane({ reduced, lite, mouseRef }: LiquidPlaneProps) {
     }
     uniforms.uRes.value.set(size.width, size.height);
 
-    // smooth the raw pointer ref into the uniform (no React state involved)
     targetMouse.current.set(mouseRef.current.x, mouseRef.current.y);
-    uniforms.uMouse.value.lerp(targetMouse.current, reduced ? 0 : 0.055);
+    uniforms.uMouse.value.lerp(targetMouse.current, reduced ? 0 : 0.035);
+
+    // mirror the shared CPU trail into the shader, in drag order
+    const arr = uniforms.uTrail.value as THREE.Vector4[];
+    const pts = trail.current.points;
+    for (let i = 0; i < TRAIL_MAX; i++) {
+      const pt = pts[i];
+      if (pt) arr[i].set(pt.x, pt.y, pt.age, pt.strength);
+      else arr[i].set(0, 0, 999, 0);
+    }
   });
 
   return (
@@ -234,6 +253,7 @@ interface LiquidBackgroundProps {
   reduced: boolean;
   lite: boolean;
   mouseRef: React.MutableRefObject<MousePos>;
+  trail: React.RefObject<TrailPool>;
 }
 
 export default function LiquidBackground({
@@ -241,6 +261,7 @@ export default function LiquidBackground({
   reduced,
   lite,
   mouseRef,
+  trail,
 }: LiquidBackgroundProps) {
   const [hasGL] = useState(supportsWebGL);
   const [hidden, setHidden] = useState(false);
@@ -288,7 +309,7 @@ export default function LiquidBackground({
         }}
         camera={{ position: [0, 0, 1] }}
       >
-        <LiquidPlane reduced={reduced} lite={lite} mouseRef={mouseRef} />
+        <LiquidPlane reduced={reduced} lite={lite} mouseRef={mouseRef} trail={trail} />
       </Canvas>
     </div>
   );

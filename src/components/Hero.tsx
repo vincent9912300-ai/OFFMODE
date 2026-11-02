@@ -1,8 +1,4 @@
-import { lazy, Suspense } from 'react';
-import BrandWordmark from './BrandWordmark';
-import { useMousePosition } from '../hooks/useMousePosition';
-
-const LiquidBackground = lazy(() => import('./LiquidBackground'));
+import WaterSurface from './WaterSurface';
 
 interface HeroProps {
   ready: boolean;
@@ -11,16 +7,13 @@ interface HeroProps {
 }
 
 export default function Hero({ ready, reduced, lite }: HeroProps) {
-  const mouseRef = useMousePosition();
-
   return (
     <main className="relative h-svh w-full overflow-hidden" id="offmode-hero">
-      {/* heavy graphics are lazy-loaded in parallel with the loading screen */}
-      <Suspense fallback={null}>
-        <LiquidBackground ready={ready} reduced={reduced} lite={lite} mouseRef={mouseRef} />
-      </Suspense>
+      {/* GPU water: refracts the baked yellow + OFFMODE backdrop texture */}
+      <WaterSurface ready={ready} reduced={reduced} lite={lite} />
 
-      <BrandWordmark ready={ready} reduced={reduced} mouseRef={mouseRef} />
+      {/* premium glass pane over the water, under the navigation */}
+      <div className="glass-layer" aria-hidden="true" />
     </main>
   );
 }

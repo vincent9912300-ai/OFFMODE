@@ -18,10 +18,13 @@ export default function LoadingScreen({ onComplete, reduced }: LoadingScreenProp
   };
 
   useEffect(() => {
+    // hard guarantee: never let a stalled render loop (rAF starvation on slow
+    // GPUs or software GL) trap the user behind the loading screen
+    const failsafe = window.setTimeout(finish, reduced ? 500 : 2600);
+
     // advance the progress bar; complete after a minimum brand moment
     if (reduced) {
-      const t = window.setTimeout(finish, 350);
-      return () => window.clearTimeout(t);
+      return () => window.clearTimeout(failsafe);
     }
     const tl = gsap.timeline();
     tl.fromTo(
@@ -31,13 +34,14 @@ export default function LoadingScreen({ onComplete, reduced }: LoadingScreenProp
     );
     return () => {
       tl.kill();
+      window.clearTimeout(failsafe);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduced]);
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-ink">
-      <p className="mb-6 font-display text-xs tracking-[0.55em] text-electric md:text-sm">
+          <p className="mb-6 font-display text-xs tracking-[0.55em] text-electric md:text-sm">
         OFFMODE
       </p>
       <div className="h-px w-40 overflow-hidden bg-white/15 md:w-56">
