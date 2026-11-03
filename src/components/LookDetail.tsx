@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 
 export interface PaletteColor {
@@ -167,6 +167,11 @@ export default function LookDetail({ look, reduced, onClose }: LookDetailProps) 
   const tlRef = useRef<gsap.core.Timeline | null>(null);
   const driftRef = useRef<gsap.core.Tween | null>(null);
   const busyRef = useRef(false);
+
+  useEffect(() => {
+    document.body.classList.add('look-open');
+    return () => document.body.classList.remove('look-open');
+  }, []);
 
   useLayoutEffect(() => {
     const root = rootRef.current;

@@ -16,7 +16,7 @@ body.is-over-goo,
 body.no-gl .venom-hit {
   cursor: var(--cur-hand) 7 2, pointer;
 }
-body.is-engaged {
+body[data-venom="1"]:not(.look-open).is-engaged {
   cursor: none;
 }
 

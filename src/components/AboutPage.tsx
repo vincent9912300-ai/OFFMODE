@@ -423,7 +423,13 @@ export default function AboutPage({ progress, reduced, isStandalone = false }: A
   useMotionValueEvent(progress, 'change', (v) => {
     // latch on: the vendored goo has no teardown, so never mount twice
     if (v > 0.24) setVenomOn(true);
+    // the goo canvas paints the cursor, so the native one is only hidden while
+    // this page is on screen (otherwise the rest of the site loses its pointer)
+    if (v > 0.32) document.body.dataset.venom = '1';
+    else delete document.body.dataset.venom;
   });
+
+  useEffect(() => () => { delete document.body.dataset.venom; }, []);
 
   const wrapperProps = isStandalone
     ? {
