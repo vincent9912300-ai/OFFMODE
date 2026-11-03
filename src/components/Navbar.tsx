@@ -6,9 +6,10 @@ const LINKS = ['DISCOVER', 'COLLECTIONS', 'STYLES', 'ABOUT'] as const;
 interface NavbarProps {
   ready: boolean;
   reduced: boolean;
+  onSelectLink?: (link: string) => void;
 }
 
-export default function Navbar({ ready, reduced }: NavbarProps) {
+export default function Navbar({ ready, reduced, onSelectLink }: NavbarProps) {
   const headerRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -28,13 +29,18 @@ export default function Navbar({ ready, reduced }: NavbarProps) {
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
-  // lock body scroll while the overlay is open (page is single-screen anyway)
+  // lock body scroll while the overlay is open
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
   }, [menuOpen]);
+
+  const handleLinkClick = (label: string) => {
+    onSelectLink?.(label.toLowerCase());
+    closeMenu();
+  };
 
   return (
     <>
@@ -51,21 +57,27 @@ export default function Navbar({ ready, reduced }: NavbarProps) {
           <a
             href="#"
             data-cursor
-            onClick={(e) => e.preventDefault()}
+            onClick={(e) => {
+              e.preventDefault();
+              handleLinkClick('discover');
+            }}
             className="select-none font-display text-sm tracking-[0.18em] md:text-base"
           >
             <span className="inline-block -skew-x-6">OFFMODE</span>
             <span className="align-super text-[8px] opacity-60">®</span>
           </a>
 
-          {/* center links — visual placeholders, they respond without navigating */}
-          <ul className="hidden items-center gap-12 text-[11px] font-medium tracking-[0.3em] md:flex">
+          {/* center links — click navigates to static catalog sections */}
+          <ul className="hidden items-center gap-10 text-[11px] font-medium tracking-[0.3em] md:flex">
             {LINKS.map((label, i) => (
               <li key={label}>
                 <a
                   href="#"
                   data-cursor
-                  onClick={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleLinkClick(label);
+                  }}
                   className="nav-link flex items-center"
                   aria-current={i === 0 ? 'page' : undefined}
                 >
@@ -77,27 +89,29 @@ export default function Navbar({ ready, reduced }: NavbarProps) {
           </ul>
 
           {/* minimal hamburger */}
-          <button
-            type="button"
-            data-cursor
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
-            className="group flex h-9 w-10 flex-col items-end justify-center gap-[7px] p-2"
-          >
-            <span
-              className={`menu-line ${menuOpen ? 'w-7' : 'w-7'} ${
-                menuOpen ? 'translate-y-[4.5px] rotate-45' : ''
-              }`}
-            />
-            <span
-              className={`menu-line ${menuOpen ? 'w-7 -translate-y-[4.5px] -rotate-45' : 'w-4 group-hover:w-7'}`}
-            />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              data-cursor
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((v) => !v)}
+              className="group flex h-9 w-10 flex-col items-end justify-center gap-[7px] p-2"
+            >
+              <span
+                className={`menu-line ${menuOpen ? 'w-7' : 'w-7'} ${
+                  menuOpen ? 'translate-y-[4.5px] rotate-45' : ''
+                }`}
+              />
+              <span
+                className={`menu-line ${menuOpen ? 'w-7 -translate-y-[4.5px] -rotate-45' : 'w-4 group-hover:w-7'}`}
+              />
+            </button>
+          </div>
         </nav>
       </header>
 
-      {/* fullscreen menu overlay (first-screen UI only, no other pages) */}
+      {/* fullscreen menu overlay */}
       <div
         className={`fixed inset-0 z-50 bg-ink transition-[clip-path,opacity] duration-500 ease-[cubic-bezier(0.83,0,0.17,1)] ${
           menuOpen
@@ -127,13 +141,15 @@ export default function Navbar({ ready, reduced }: NavbarProps) {
               onClick={(e) => {
                 e.preventDefault();
                 closeMenu();
+                handleLinkClick(label);
               }}
               className="menu-overlay-link"
             >
               {label}
             </a>
           ))}
-          <p className="mt-6 font-sans text-[10px] tracking-[0.5em] text-white/40">
+
+          <p className="mt-4 font-sans text-[10px] tracking-[0.5em] text-white/40">
             WEAR YOUR MOOD
           </p>
         </nav>

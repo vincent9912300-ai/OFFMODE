@@ -3,6 +3,16 @@ import { mountVenomButton } from '../vendor/venom-button/venom.js';
 
 interface VenomExploreProps {
   label?: string;
+  /** distance from the right edge in CSS px (default 44, the vendored value) */
+  padRight?: number;
+  /** distance from the bottom edge in CSS px (default 44, the vendored value) */
+  padBottom?: number;
+  /** distance from the left edge in CSS px (overrides padRight) */
+  padLeft?: number;
+  /** distance from the top edge in CSS px (overrides padBottom) */
+  padTop?: number;
+  /** pin the goo to a display edge: slab hidden, all goo comes out of the border */
+  side?: 'left' | 'right' | 'top' | 'bottom';
 }
 
 /**
@@ -13,7 +23,14 @@ interface VenomExploreProps {
  * the effect cancels itself before anything attaches (the vendored script
  * is a one-shot mount with no teardown).
  */
-export default function VenomExplore({ label = 'EXPLORE' }: VenomExploreProps) {
+export default function VenomExplore({
+  label = 'EXPLORE',
+  padRight = 44,
+  padBottom = 44,
+  padLeft,
+  padTop,
+  side,
+}: VenomExploreProps) {
   const stageRef = useRef<HTMLCanvasElement>(null);
   const hitRef = useRef<HTMLButtonElement>(null);
 
@@ -27,8 +44,11 @@ export default function VenomExplore({ label = 'EXPLORE' }: VenomExploreProps) {
         canvas,
         hit,
         label,
-        padRight: 44,
-        padBottom: 44,
+        padRight,
+        padBottom,
+        padLeft,
+        padTop,
+        side,
       });
     }, 0);
     return () => {
@@ -36,7 +56,7 @@ export default function VenomExplore({ label = 'EXPLORE' }: VenomExploreProps) {
       destroy?.();
       destroy = undefined;
     };
-  }, [label]);
+  }, [label, padRight, padBottom, padLeft, padTop, side]);
 
   return (
     <>

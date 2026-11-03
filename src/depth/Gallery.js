@@ -21,6 +21,18 @@ class Gallery {
     this.planeFadeSampleOffset = 1
     this.planeFadeSmoothing = 0.14
 
+    // Per-look variety: every box gets its own size and flies in from a
+    // different corner while the camera approaches it (bottom-right,
+    // top-right, bottom-left, top-left, repeating)
+    this.planeSizeVariants = [1, 0.78, 1.08, 0.86, 0.95, 0.72, 1.05, 0.9, 1.12, 0.8]
+    this.planeEnterDirections = [
+      { x: 1.6, y: -0.7 },
+      { x: 1.25, y: 1.05 },
+      { x: -1.6, y: -0.8 },
+      { x: -1.2, y: 1.0 },
+    ]
+    this.planeEnterAmount = 1
+
     // Parallax
     this.parallaxEnabled = true
     this.parallaxAmountX = 0.16
@@ -124,13 +136,24 @@ class Gallery {
     }
   }
 
+  getPlaneSizeVariant(index) {
+    const variants = this.planeSizeVariants
+    return variants[index % variants.length] || 1
+  }
+
+  getPlaneEnterDirection(index) {
+    const directions = this.planeEnterDirections
+    return directions[index % directions.length] || { x: 0, y: 0 }
+  }
+
   updatePlaneScale() {
     const isMobileViewport = window.innerWidth <= this.mobileBreakpoint
     const scale = isMobileViewport ? this.mobilePlaneScale : this.desktopPlaneScale
 
-    this.planes.forEach((plane) => {
+    this.planes.forEach((plane, index) => {
       const aspectRatio = plane.userData.aspectRatio || 1
-      plane.scale.set(scale * aspectRatio, scale, 1)
+      const sizeVariant = this.getPlaneSizeVariant(index)
+      plane.scale.set(scale * sizeVariant * aspectRatio, scale * sizeVariant, 1)
     })
   }
 
@@ -441,7 +464,7 @@ class Gallery {
     window.addEventListener('pointerleave', this.onPointerLeave, { passive: true })
   }
 
-  updatePlaneMotion(scroll = null) {
+  updatePlaneMotion(scroll = null, cameraZ = null) {
     // Smooth pointer toward target
     this.pointerCurrent.lerp(this.pointerTarget, this.parallaxSmoothing)
 
@@ -471,6 +494,18 @@ class Gallery {
     // Per-plane: position, rotation, scale
     const xSpreadFactor = this.getXSpreadFactor()
 
+    // depth of the camera in plane units, sampled exactly like the fade
+    // does, so a look starts sliding from its corner the moment it fades in
+    // and lands dead-centre on its resting spot
+    const firstPlaneZ = this.planes.length ? this.planes[0].position.z : 0
+    const safeCameraZ = Number.isFinite(cameraZ) ? cameraZ : firstPlaneZ
+    const gap = Math.max(this.planeGap, 0.0001)
+    const normalizedDepth = THREE.MathUtils.clamp(
+      (firstPlaneZ - (safeCameraZ - gap * this.planeFadeSampleOffset)) / gap,
+      0,
+      Math.max(this.planes.length - 1, 0)
+    )
+
     this.planes.forEach((plane, index) => {
       const basePosition = plane.userData.basePosition || { x: 0, y: 0 }
       const xPosition = basePosition.x * xSpreadFactor
@@ -484,8 +519,15 @@ class Gallery {
       const parallaxOffsetY = this.pointerCurrent.y * this.parallaxAmountY * parallaxInfluence
       const gestureOffsetY = this.driftCurrent * this.gestureParallaxAmountY
 
-      plane.position.x = xPosition + parallaxOffsetX
-      plane.position.y = yPosition + parallaxOffsetY + gestureOffsetY
+      // 0 = one gap before the look, 1 = camera parked on it
+      const enterProgress = THREE.MathUtils.clamp(normalizedDepth - (index - 1), 0, 1)
+      const enterEase = enterProgress * enterProgress * (3 - 2 * enterProgress)
+      const enterAmount = (1 - enterEase) * this.planeEnterAmount
+      const enterDir = this.getPlaneEnterDirection(index)
+
+      plane.position.x =
+        xPosition + parallaxOffsetX + enterDir.x * enterAmount * xSpreadFactor
+      plane.position.y = yPosition + parallaxOffsetY + gestureOffsetY + enterDir.y * enterAmount
       plane.position.z = zPosition
 
       const breathInfluence = this.breathEnabled ? this.breathIntensity * opacity : 0
@@ -498,9 +540,10 @@ class Gallery {
       const aspectRatio = plane.userData.aspectRatio || 1
       const baseScale =
         window.innerWidth <= this.mobileBreakpoint ? this.mobilePlaneScale : this.desktopPlaneScale
+      const sizeVariant = this.getPlaneSizeVariant(index)
       const scalePulse = 1 + this.breathScaleAmount * breathInfluence
-      plane.scale.x = baseScale * aspectRatio * scalePulse
-      plane.scale.y = baseScale * scalePulse
+      plane.scale.x = baseScale * sizeVariant * aspectRatio * scalePulse
+      plane.scale.y = baseScale * sizeVariant * scalePulse
       plane.scale.z = 1
     })
   }
@@ -512,7 +555,7 @@ class Gallery {
   update(camera = null, scroll = null) {
     if (!camera) return
     this.updatePlaneVisibility(camera.position.z)
-    this.updatePlaneMotion(scroll)
+    this.updatePlaneMotion(scroll, camera.position.z)
   }
 
   dispose() {

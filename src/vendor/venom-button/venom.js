@@ -78,6 +78,8 @@ const FINGERS = [
 ];
 const cur = { x: -1e4, y: -1e4, vx: 0, vy: 0, lx: -1e4, ly: -1e4, present: false, down: false, mouse: false, t: 0 };
 const btn = { cx: 0, cy: 0, hw: 150, hh: 30, lbw: 72, lbh: 18, top: 14, sink: 5, dome: 1.2, lift: 0, liftV: 0, press: 0, pressV: 0, pressTarget: 0, intro: reduced ? 1 : 0, introV: 0 };
+let edgePos = -1; // edge mode: px along the border where the goo anchor sits
+let edgeOwner = 'bottom'; // edge mode: only the nearest edge renders the goo + drawn hand
 const pull = { x: 0, y: 0, amt: 0, v: 0 };
 const peak = { x: 0, y: 0, amt: 0, v: 0 };
 let time = reduced ? 3 : 0, lastSnap = -1, lastSpawn = -1, lastMicro = -1, nextProbe = 2.6, awareNow = 0;
@@ -1569,7 +1571,8 @@ function render() {
       nc++;
     }
   }
-  const handOn = hand.on && hand.ready ? 1 : 0;
+  const drawHand = !opts.side || !cur.present || edgeOwner === opts.side;
+  const handOn = drawHand && hand.on && hand.ready ? 1 : 0;
 
   let nb = 0;
   for (const c of crawlers) {
@@ -1672,15 +1675,44 @@ function render() {
 function layoutButton() {
   // offmode patch: the pill hugs the word and sits in the bottom-right corner
   const sc = LABEL_CSS / LABEL_PX;
+  const edge = opts.side;
+  const vm = 10; // keep the whole pill inside the viewport on any display size
+  if (edge) {
+    // edge mode: a nearly invisible sliver pinned to the border, so the goo
+    // appears to pour straight out of the display with no visible button
+    const em = 26;
+    btn.hh = 1.5;
+    btn.hw = 7;
+    btn.lbw = 0;
+    btn.lbh = 0;
+    btn.cx = edge === 'left' ? 0 : edge === 'right' ? viewW() : viewW() / 2;
+    btn.cy = edge === 'top' ? 0 : edge === 'bottom' ? viewH() : viewH() / 2;
+    if (edgePos >= 0) {
+      if (edge === 'left' || edge === 'right') btn.cy = clamp(edgePos, em, viewH() - em);
+      else btn.cx = clamp(edgePos, em, viewW() - em);
+    }
+    const hs = 46; // touch target along the edge
+    Object.assign(hitEl.style, {
+      left: `${btn.cx * VIEW_SCALE - hs / 2}px`,
+      top: `${btn.cy * VIEW_SCALE - hs / 2}px`,
+      width: `${hs}px`,
+      height: `${hs}px`,
+      opacity: '0',
+    });
+    return;
+  }
   btn.hh = 30;
   btn.hw = ((labelInkW || 520) * sc) / 2 + 30;
   btn.lbw = (LABEL_W * sc) / 2;
   btn.lbh = (LABEL_H * sc) / 2;
-  btn.cx = viewW() - (opts.padRight ?? 44) - btn.hw;
-  btn.cy = viewH() - (opts.padBottom ?? 44) - btn.hh;
+  btn.cx = opts.padLeft != null ? opts.padLeft + btn.hw : viewW() - (opts.padRight ?? 44) - btn.hw;
+  btn.cy = opts.padTop != null ? opts.padTop + btn.hh : viewH() - (opts.padBottom ?? 44) - btn.hh;
+  btn.cx = clamp(btn.cx, btn.hw + vm, Math.max(btn.hw + vm, viewW() - btn.hw - vm));
+  btn.cy = clamp(btn.cy, btn.hh + vm, Math.max(btn.hh + vm, viewH() - btn.hh - vm));
   Object.assign(hitEl.style, {
     left: `${(btn.cx - btn.hw) * VIEW_SCALE}px`, top: `${(btn.cy - btn.hh) * VIEW_SCALE}px`,
     width: `${btn.hw * 2 * VIEW_SCALE}px`, height: `${btn.hh * 2 * VIEW_SCALE}px`,
+    opacity: '',
   });
 }
 function resize() {
@@ -1695,6 +1727,30 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
+// edge mode: slide the anchor along its own border so the goo erupts right
+// under the finger/cursor wherever it touches that display edge
+if (opts.side) {
+  const MARGIN = 26;
+  const ACTIVE = 280; // px from the border where the anchor starts tracking
+  const onEdgePointer = (e) => {
+    const s = opts.side;
+    const px = e.clientX / VIEW_SCALE;
+    const py = e.clientY / VIEW_SCALE;
+    if (s === 'left' || s === 'right') {
+      const near = s === 'left' ? px < ACTIVE : viewW() - px < ACTIVE;
+      if (!near) return;
+      edgePos = py;
+    } else {
+      const near = s === 'top' ? py < ACTIVE : viewH() - py < ACTIVE;
+      if (!near) return;
+      edgePos = px;
+    }
+    layoutButton();
+  };
+  addEventListener('pointermove', onEdgePointer, { passive: true });
+  addEventListener('pointerdown', onEdgePointer, { passive: true });
+}
+
 let last = performance.now(), acc = 0, frameEma = 1 / 60, slowFor = 0, fpsShown = 0;
 const fpsEl = { textContent: '' };
 function frame(now) {
@@ -1706,7 +1762,8 @@ function frame(now) {
   while (acc >= SUB && n < 40 && !window.VenomButton?._debug.paused) { step(SUB); acc -= SUB; n++; }
   if (n === 40) acc = 0;
   // the OS cursor hides while the rendered 3D hand stands in for it
-  if (hand.on !== document.body.classList.contains('is-engaged')) document.body.classList.toggle('is-engaged', hand.on);
+  if (hand.on) document.body.classList.add('is-engaged');
+else if (!document.querySelector('.venom-hit:hover')) document.body.classList.remove('is-engaged');
   render();
   // adaptive resolution if the GPU struggles
   if (frameEma > 1 / 40 && dt < 0.09 && document.visibilityState === 'visible') slowFor += dt; else slowFor = 0;

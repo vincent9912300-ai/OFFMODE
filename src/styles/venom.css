@@ -27,7 +27,7 @@ body.is-engaged {
   height: 100vh;
   display: block;
   pointer-events: none;
-  z-index: 20;
+  z-index: 60;
 }
 .venom-hit {
   position: fixed;
@@ -41,7 +41,7 @@ body.is-engaged {
   -webkit-tap-highlight-color: transparent;
   touch-action: none;
   cursor: inherit;
-  z-index: 21;
+  z-index: 61;
 }
 .venom-hit:focus {
   outline: none;

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./animations.css";
+@import "./venom.css";
 
 :root {
   --background: 0 0% 4%;
@@ -16,4 +17,13 @@
   --font-sans: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
   --color-electric: #ffe500;
   --color-ink: #050505;
+}
+
+.about-drop::first-letter {
+  float: left;
+  margin: 0.06em 0.12em 0 0;
+  color: #101010;
+  font-family: var(--font-display);
+  font-size: 3.4em;
+  line-height: 0.78;
 }

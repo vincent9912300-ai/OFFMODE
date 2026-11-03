@@ -60,7 +60,7 @@ export default function WaterSurface({ ready, reduced, lite }: WaterSurfaceProps
         swell: 0.85,
         amplitude: BASE_AMP,
         ringSpeed: 0.33,
-        decay: 1.25,
+        decay: 2.3,
         wavelength: 55,
         life: 5,
         refraction: 0.2,

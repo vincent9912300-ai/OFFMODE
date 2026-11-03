@@ -9,3 +9,8 @@ tsconfig.tsbuildinfo
 # reference repos the user dropped in (own git history)
 KineticTypePageTransition/
 a-drift/
+vite-dev*.log
+.vite-dev.pid
+codrops-cinematic-scroll-animations/
+freebuff-chat-*.md
+get-ballast.js

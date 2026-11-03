@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
-import { motion, useTransform, type MotionValue } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useTransform, type MotionValue } from 'framer-motion';
 import * as THREE from 'three';
 import { Gallery } from '@/depth/Gallery';
 import { Background } from '@/depth/Background';
 import { buildGalleryData, imageSets } from '@/depth/galleryData';
+import type { OpenLook } from '@/components/LookDetail';
 
 type GallerySet = 'boy' | 'girl' | 'duo';
 
@@ -13,7 +14,7 @@ interface DepthGalleryProps {
   set: GallerySet;
   reduced: boolean;
   /** fired when the user clicks the plane that's currently resting */
-  onOpenLook: (look: { src: string; word: string; index: number }) => void;
+  onOpenLook: (look: OpenLook) => void;
 }
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -41,11 +42,13 @@ const loadAllTextures = () => {
 
 /**
  * Screen three — the Codrops Atmospheric Depth Gallery, driven by the same
- * shared spring: its circle wipes out of the BOTTOM-LEFT corner, then the
- * camera dives through the selected look stack (boy/girl + duo on both,
- * duo alone when nothing was picked) with mood backgrounds per image.
- * The layer stays non-interactive (parallax listens on window), taking
- * over the clicks so page two can't be hit through it.
+ * shared spring. The black layer sits under the transition panels (see
+ * TransitionPanels) and the look images only fade in once those panels have
+ * attached, then the camera dives through the selected look stack (boy/girl
+ * + duo on both, duo alone when nothing was picked) with mood backgrounds
+ * per image. The layer stays non-interactive (parallax listens on window),
+ * taking over the clicks once it is fully visible so page two can't be hit
+ * through it.
  */
 export default function DepthGallery({
   s2,
@@ -58,22 +61,31 @@ export default function DepthGallery({
   const openRef = useRef(onOpenLook);
   openRef.current = onOpenLook;
 
-  const clipPath = useTransform(
+  // in scrolling only display style
+  const [activeLook, setActiveLook] = useState<{
+    title: string;
+    accent: string;
+    index: number;
+    x: number;
+  } | null>(null);
+
+  // black bed under the transition panels — pure dark, no wipe shape
+  const layerOpacity = useTransform(s2, [0.04, 0.16], [0, 1]);
+  // page three opens from the centre: a circular mask grows outward from
+  // the middle of the screen once the cinematic scroll has finished
+  const contentClip = useTransform(
     s2,
-    [0.1, 0.22],
-    ['circle(0% at 0% 100%)', 'circle(165% at 0% 100%)'],
+    [0.12, 0.3],
+    ['circle(0% at 50% 50%)', 'circle(150% at 50% 50%)'],
   );
-  // the wipe paints pure black first; the images only display once the
-  // screen is fully covered — and the depth dive starts on that same beat,
-  // so there is never a black stretch where scrolling does nothing
-  const contentOpacity = useTransform(s2, [0.22, 0.38], [0, 1]);
+  const contentOpacity = useTransform(s2, [0.12, 0.28], [0, 1]);
   const contentBlur = useTransform(
     s2,
-    [0.22, 0.38],
+    [0.12, 0.28],
     reduced ? ['blur(0px)', 'blur(0px)'] : ['blur(18px)', 'blur(0px)'],
   );
   const contentPointer = useTransform(s2, (v) =>
-    v > 0.38 ? 'auto' : 'none',
+    v > 0.3 ? 'auto' : 'none',
   );
 
   useEffect(() => {
@@ -98,7 +110,10 @@ export default function DepthGallery({
 
     let maxZ = 0;
     let minZ = -1;
-    const scrollState = { velocity: 0, velocityMax: 1.5 };
+    const scrollState: { velocity: number; velocityMax: number } = {
+      velocity: 0,
+      velocityMax: 1.5,
+    };
     let lastS2 = s2.get();
     let vel = 0;
 
@@ -203,11 +218,29 @@ export default function DepthGallery({
       });
       background.update(performance.now());
 
+      // track active resting look to display style in scrolling
+      if (gallery.planes.length > 0 && blendData) {
+        const activeIdx =
+          blendData.blend < 0.5 ? blendData.currentPlaneIndex : blendData.nextPlaneIndex;
+        if (activeIdx !== lastActiveIdx && gallery.planeConfig[activeIdx]) {
+          lastActiveIdx = activeIdx;
+          const cfg = gallery.planeConfig[activeIdx] as any;
+          setActiveLook({
+            title: cfg.title || cfg.label?.word || `Look ${activeIdx + 1}`,
+            accent: cfg.accentColor || '#ffe500',
+            index: activeIdx,
+            x: cfg.position?.x ?? 0,
+          });
+        }
+      }
+
       renderer.clear(true, true, true);
       background.render(renderer);
       renderer.clearDepth();
       renderer.render(scene, camera);
     };
+
+    let lastActiveIdx = -1;
 
     // --- kinetic open: click a resting plane to open its detail view -----
     const raycaster = new THREE.Raycaster();
@@ -249,11 +282,17 @@ export default function DepthGallery({
     const onClick = (e: PointerEvent) => {
       const hit = hitPlane(e);
       if (!hit || !gallery) return;
-      const cfg = gallery.planeConfig[hit.index];
+      const cfg = gallery.planeConfig[hit.index] as any;
       openRef.current({
         src: cfg.textureSrc,
-        word: cfg.label?.word || `look ${hit.index + 1}`,
         index: hit.index,
+        hero: cfg.hero || '',
+        title: cfg.title || cfg.label?.word || `Look ${hit.index + 1}`,
+        word: cfg.label?.word || cfg.title || `Look ${hit.index + 1}`,
+        details: cfg.details || '',
+        palette: cfg.palette || '',
+        accent: cfg.accentColor || '#ffe500',
+        paletteColors: cfg.paletteColors || [],
       });
     };
     canvas.addEventListener('pointermove', onPointerMove);
@@ -288,18 +327,62 @@ export default function DepthGallery({
   }, [set, reduced, s2]);
 
   return (
-    <motion.div
-      id="gallery-screen"
-      aria-hidden="true"
-      style={{ clipPath, pointerEvents: contentPointer }}
-      className="pointer-events-none absolute inset-0 z-[70] bg-[#0e0e0e]"
-    >
+    <>
       <motion.div
-        style={{ opacity: contentOpacity, filter: contentBlur }}
-        className="absolute inset-0"
+        aria-hidden="true"
+        style={{ opacity: layerOpacity }}
+        className="pointer-events-none absolute inset-0 z-[76] bg-[#0e0e0e]"
+      />
+      <motion.div
+        id="gallery-screen"
+        aria-hidden="true"
+        style={{ pointerEvents: contentPointer }}
+        className="pointer-events-none absolute inset-0 z-[78]"
       >
-        <canvas ref={canvasRef} className="block h-full w-full" />
+        <motion.div
+          style={{ opacity: contentOpacity, filter: contentBlur, clipPath: contentClip }}
+          className="absolute inset-0"
+        >
+          <canvas ref={canvasRef} className="block h-full w-full" />
+        </motion.div>
+
+        {/* in scrolling only display style */}
+        <AnimatePresence mode="wait">
+          {activeLook && (
+            <motion.div
+              key={activeLook.index}
+              initial={reduced ? { opacity: 0 } : { opacity: 0, y: 16, filter: 'blur(8px)' }}
+              animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={reduced ? { opacity: 0 } : { opacity: 0, y: -12, filter: 'blur(8px)' }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              style={{ opacity: contentOpacity }}
+              className={`pointer-events-none absolute bottom-8 z-30 flex flex-col px-6 md:px-14 ${
+                activeLook.x < 0
+                  ? 'right-0 items-end text-right'
+                  : activeLook.x > 0
+                    ? 'left-0 items-start text-left'
+                    : 'inset-x-0 items-center text-center'
+              }`}
+            >
+              <span className="font-sans text-[10px] tracking-[0.45em] uppercase text-white/40 mb-1.5">
+                STYLE
+              </span>
+              <h3
+                className="font-display text-[clamp(1.4rem,3.2vw,2.8rem)] uppercase leading-none tracking-tight -skew-x-2 drop-shadow-[0_4px_24px_rgba(0,0,0,0.85)] max-w-[85vw]"
+                style={{
+                  color: activeLook.accent,
+                  textShadow: `0 0 35px ${activeLook.accent}50`,
+                }}
+              >
+                {activeLook.title}
+              </h3>
+              <span className="mt-2.5 font-sans text-[9px] tracking-[0.35em] uppercase text-white/40">
+                CLICK LOOK FOR FULL DETAILS
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
-    </motion.div>
+    </>
   );
 }
