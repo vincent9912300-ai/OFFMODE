@@ -1,0 +1,172 @@
+/*
+  "The rearing ribbon" from Animorio — https://animorio.com
+  License: free on your own sites and your clients' sites, paid work included.
+  Not for resale, redistribution, templates or code collections — https://animorio.com/en/license/
+*/
+/* The rearing ribbon: a tall page with one screen that stays put. Scrolling down moves the ribbon sideways;
+   the canvas draws the cards and the floor, the brand and the captions are ordinary HTML on top. */
+:root {
+  --page: #0b0b0c;
+  --ink: #f4f1ea;
+  --soft: rgba(244, 241, 234, 0.58);
+  --accent: #ffd400;
+  --edge: clamp(20px, 5.4vw, 80px);   /* the margin of the brand and the captions */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hall {
+  position: relative;
+  min-height: 100vh;
+}
+
+/* the screen that stays while the page goes by. It is as tall as the screen with the browser's bars away (lvh):
+   on a phone the bars retract while you scroll, and a shorter stage would leave an empty band at the bottom */
+.stage {
+  --bars: 0px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+@supports (height: 100lvh) {
+  .stage {
+    --bars: calc(100lvh - 100svh);
+    height: 100lvh;
+  }
+}
+.stage__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+.is-over-card .stage__canvas {
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- the frame: brand, link, captions */
+.bar,
+.foot {
+  position: absolute;
+  left: var(--edge);
+  right: var(--edge);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  opacity: 0;
+}
+.bar {
+  top: clamp(18px, 4.4vh, 44px);
+}
+/* make room for the site's own back button when the page runs inside the overlay */
+.is-embedded .bar {
+  top: calc(clamp(18px, 4.4vh, 44px) + 48px);
+}
+/* the captions stay above the browser's bottom bar when it is showing */
+.foot {
+  bottom: calc(clamp(18px, 4.4vh, 44px) + var(--bars));
+}
+.brand {
+  margin: 0;
+  font-family: 'Anton', 'Arial Narrow', sans-serif;
+  font-size: clamp(15px, 1.45vw, 20px);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+.bar__link,
+.foot p {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  font-family: 'Space Mono', ui-monospace, monospace;
+}
+.bar__link {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  pointer-events: auto;
+  transition: color 0.3s ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.bar__link::before {
+  content: '';
+  position: absolute;
+  inset: -16px;
+}
+.bar__link:focus-visible {
+  outline: 1px solid var(--ink);
+  outline-offset: 6px;
+}
+@media (hover: hover) {
+  .bar__link:hover {
+    color: var(--accent);
+  }
+}
+.foot p:first-child {
+  color: var(--soft);
+}
+
+/* ---------------------------------------------------------------- the rooms, for readers only while the canvas draws them */
+.rooms {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------- without WebGL: a flat row that the scroll moves */
+.is-flat .stage__canvas {
+  display: none;
+}
+.is-flat .rooms {
+  inset: 50% auto auto 0;
+  display: flex;
+  gap: 10px;
+  width: max-content;
+  height: 46vh;
+  margin: -23vh 0 0;
+  overflow: visible;
+  clip-path: none;
+  will-change: transform;
+}
+.is-flat .rooms li {
+  position: relative;
+  flex: none;
+  height: 100%;
+}
+.is-flat .rooms img {
+  display: block;
+  height: 100%;
+  width: auto;
+  border-radius: 20px;
+}
+.is-flat .rooms h2,
+.is-flat .rooms p {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

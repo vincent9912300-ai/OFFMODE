@@ -131,7 +131,7 @@ function formatDressingDetails(text: string, look: OpenLook) {
           return (
             <p
               key={idx}
-              className="font-sans text-xs md:text-[13px] leading-relaxed tracking-wide text-white/80"
+              className="font-sans text-xs md:text-[13px] leading-relaxed tracking-wide text-white/95"
             >
               {highlightColorWords(part, look.paletteColors)}
             </p>
@@ -142,7 +142,7 @@ function formatDressingDetails(text: string, look: OpenLook) {
   }
 
   return (
-    <p className="font-sans text-xs md:text-[13px] leading-relaxed tracking-wide text-white/80">
+    <p className="font-sans text-xs md:text-[13px] leading-relaxed tracking-wide text-white/95">
       {highlightColorWords(text, look.paletteColors)}
     </p>
   );
@@ -357,7 +357,7 @@ export default function LookDetail({ look, reduced, onClose }: LookDetailProps) 
                 >
                   {heroName}
                 </span>
-                <span className="font-sans text-[10px] tracking-[0.4em] uppercase text-white/40">
+                <span className="font-sans text-[10px] tracking-[0.4em] uppercase text-white/90">
                   SYSTEM:OFFMODE FW26
                 </span>
               </div>
@@ -373,7 +373,7 @@ export default function LookDetail({ look, reduced, onClose }: LookDetailProps) 
               }}
               className="pt-2"
             >
-              <h2 className="font-sans text-[10px] tracking-[0.4em] uppercase text-white/50 mb-3 flex items-center gap-2">
+              <h2 className="font-sans text-[10px] tracking-[0.4em] uppercase text-white/80 mb-3 flex items-center gap-2">
                 <span
                   className="w-1.5 h-1.5 rounded-full"
                   style={{ backgroundColor: accentColor }}
@@ -406,7 +406,7 @@ export default function LookDetail({ look, reduced, onClose }: LookDetailProps) 
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-white/70">{look.palette}</span>
+                  <span className="text-xs text-white/90">{look.palette}</span>
                 )}
               </div>
             </div>
@@ -418,7 +418,7 @@ export default function LookDetail({ look, reduced, onClose }: LookDetailProps) 
               }}
               className="pt-2 pb-4"
             >
-              <h2 className="font-sans text-[10px] tracking-[0.4em] uppercase text-white/50 mb-3 flex items-center gap-2">
+              <h2 className="font-sans text-[10px] tracking-[0.4em] uppercase text-white/80 mb-3 flex items-center gap-2">
                 <span
                   className="w-1.5 h-1.5 rounded-full"
                   style={{ backgroundColor: accentColor }}

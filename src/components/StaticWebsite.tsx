@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { Search } from 'lucide-react';
 import { LOOKS } from '../depth/galleryData';
 import { type OpenLook } from './LookDetail';
 
 interface StaticWebsiteProps {
   onOpenLook: (look: OpenLook) => void;
+  onSearch?: () => void;
 }
 
-export default function StaticWebsite({ onOpenLook }: StaticWebsiteProps) {
+export default function StaticWebsite({ onOpenLook, onSearch }: StaticWebsiteProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'duo' | 'boy' | 'girl'>('all');
   const [activeNav, setActiveNav] = useState<'discover' | 'collections' | 'styles' | 'about'>('discover');
 
@@ -71,6 +73,19 @@ export default function StaticWebsite({ onOpenLook }: StaticWebsiteProps) {
           ))}
         </nav>
 
+        <button
+          type="button"
+          data-cursor
+          onClick={onSearch}
+          aria-label="Search the archive"
+          className="group flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.3em]"
+        >
+          <Search size={14} strokeWidth={2.2} aria-hidden="true" />
+          <span className="hidden sm:inline">Search</span>
+          <span className="hidden border border-black/25 px-1.5 py-0.5 text-[9px] text-black/50 md:inline-block">
+            /
+          </span>
+        </button>
       </header>
 
       {/* ────────────────────────── SECTION 1: DISCOVER ────────────────────────── */}

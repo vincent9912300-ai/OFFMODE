@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OFF THE DRUMS — Recent Jobs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="masthead">
+      <span class="masthead__left">OFF THE DRUMS · RECENT JOBS</span>
+      <div class="masthead__right">
+        <span class="masthead__hint">SCROLL, THROW THE ROW OR PLUCK THE LINE</span>
+        <button class="search-trigger" id="searchTrigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="search">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8" />
+            <path d="m15.5 15.5 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+          </svg>
+          <span>Search</span>
+          <kbd>/</kbd>
+        </button>
+      </div>
+    </header>
+
+    <main class="shop">
+      <svg class="rope" id="rope" viewBox="0 0 1440 160" preserveAspectRatio="none" aria-hidden="true">
+        <path id="ropeShadow" class="rope__shadow" transform="translate(0 4)" />
+        <path id="ropePath" class="rope__line" />
+        <path id="ropeHi" class="rope__hi" />
+        <circle id="knotL" class="rope__knot" r="8" />
+        <circle id="knotR" class="rope__knot" r="8" />
+      </svg>
+      <section class="stage" id="stage" aria-label="Print jobs, drag horizontally">
+        <div class="track" id="track"></div>
+      </section>
+    </main>
+
+    <footer class="controls">
+      <div class="counter" aria-live="polite">
+        <span class="counter__cur" id="cur">01</span>
+        <span class="counter__sep">/</span>
+        <span class="counter__tot" id="tot">08</span>
+      </div>
+
+      <div class="progress" id="progress">
+        <span class="progress__line" aria-hidden="true"></span>
+        <div class="progress__dots" id="dots"></div>
+        <span class="progress__indicator" id="indicator" aria-hidden="true"></span>
+      </div>
+
+      <button class="next" id="next" type="button" aria-label="Next job">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+          <path d="M4 12h15M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+        </svg>
+      </button>
+    </footer>
+
+    <div class="search" id="search" hidden>
+      <div class="search__panel" role="dialog" aria-modal="true" aria-label="Search print jobs">
+        <div class="search__bar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" aria-hidden="true">
+            <circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.8" />
+            <path d="m15.5 15.5 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" />
+          </svg>
+          <input class="search__input" id="searchInput" type="search" placeholder="Search jobs, formats, finishes…" autocomplete="off" spellcheck="false" aria-controls="searchResults" />
+          <kbd>ESC</kbd>
+        </div>
+        <ul class="search__results" id="searchResults" role="listbox" aria-label="Matching jobs"></ul>
+        <p class="search__empty" id="searchEmpty" hidden>No jobs match “<span></span>”</p>
+        <div class="search__foot"><span>↑↓ Select</span><span>↵ Open</span><span>Esc Close</span></div>
+      </div>
+    </div>
+
+    <div class="proxy" id="proxy" aria-hidden="true"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/Draggable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/InertiaPlugin.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

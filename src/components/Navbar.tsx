@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import { Search } from 'lucide-react';
 
 const LINKS = ['DISCOVER', 'COLLECTIONS', 'STYLES', 'ABOUT'] as const;
 
@@ -7,9 +8,10 @@ interface NavbarProps {
   ready: boolean;
   reduced: boolean;
   onSelectLink?: (link: string) => void;
+  onSearch?: () => void;
 }
 
-export default function Navbar({ ready, reduced, onSelectLink }: NavbarProps) {
+export default function Navbar({ ready, reduced, onSelectLink, onSearch }: NavbarProps) {
   const headerRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -88,8 +90,23 @@ export default function Navbar({ ready, reduced, onSelectLink }: NavbarProps) {
             ))}
           </ul>
 
-          {/* minimal hamburger */}
-          <div className="flex items-center gap-3">
+          {/* search + minimal hamburger */}
+          <div className="flex items-center gap-3 md:gap-5">
+            <button
+              type="button"
+              data-cursor
+              onClick={onSearch}
+              aria-label="Search the archive"
+              className="nav-link group flex items-center gap-2.5 py-1.5"
+            >
+              <Search size={14} strokeWidth={2.2} aria-hidden="true" />
+              <span className="hidden font-sans text-[11px] font-medium tracking-[0.3em] sm:inline">
+                SEARCH
+              </span>
+              <span className="hidden border border-black/25 px-1.5 py-0.5 font-sans text-[9px] tracking-[0.05em] text-black/50 md:inline-block">
+                /
+              </span>
+            </button>
             <button
               type="button"
               data-cursor
@@ -148,6 +165,21 @@ export default function Navbar({ ready, reduced, onSelectLink }: NavbarProps) {
               {label}
             </a>
           ))}
+
+          <a
+            href="#"
+            data-cursor
+            onClick={(e) => {
+              e.preventDefault();
+              closeMenu();
+              onSearch?.();
+            }}
+            className="menu-overlay-search"
+          >
+            <Search size={18} aria-hidden="true" />
+            SEARCH
+            <span className="text-[9px] tracking-[0.25em] text-white/35">/</span>
+          </a>
 
           <p className="mt-4 font-sans text-[10px] tracking-[0.5em] text-white/40">
             WEAR YOUR MOOD

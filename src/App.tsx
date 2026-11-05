@@ -27,7 +27,12 @@ export default function App() {
   const [openLook, setOpenLook] = useState<OpenLook | null>(null);
   // toggle between 3D scroll experience and normal static website
   const [isStaticMode, setIsStaticMode] = useState(false);
+  // search opens as an in-site page over the current experience
+  const [searchOpen, setSearchOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const openSearchPage = () => setSearchOpen(true);
+  const closeSearchPage = () => setSearchOpen(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -36,24 +41,47 @@ export default function App() {
         e.preventDefault();
         setIsStaticMode((prev) => !prev);
       }
+
+      const target = e.target as HTMLElement | null;
+      const typing =
+        !!target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable);
+      if (typing) return;
+
+      if (e.key === 'Escape' && searchOpen) {
+        e.preventDefault();
+        setSearchOpen(false);
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        openSearchPage();
+      } else if (e.key === '/') {
+        e.preventDefault();
+        openSearchPage();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [searchOpen]);
 
 
   // freeze the gallery underneath while the detail view is open
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    if (openLook) {
+    if (openLook || searchOpen) {
       el.style.overflowY = 'hidden';
       return () => {
         el.style.overflowY = '';
       };
     }
-  }, [openLook]);
+  }, [openLook, searchOpen]);
 
   // scroll range for the two round wipes (screen two → screen three)
   const { scrollYProgress } = useScroll({ container: scrollRef });
@@ -128,7 +156,10 @@ export default function App() {
     <div className="fixed inset-0 bg-electric text-ink overflow-hidden">
       {isStaticMode ? (
         <div className="h-full w-full overflow-y-auto">
-          <StaticWebsite onOpenLook={setOpenLook} />
+          <StaticWebsite
+            onOpenLook={setOpenLook}
+            onSearch={openSearchPage}
+          />
         </div>
       ) : (
         <div
@@ -151,7 +182,7 @@ export default function App() {
                 }}
                 className="absolute inset-0"
               >
-                <Navbar ready={ready} reduced={reduced} onSelectLink={goToStage} />
+                <Navbar ready={ready} reduced={reduced} onSelectLink={goToStage} onSearch={openSearchPage} />
                 <Hero ready={ready} reduced={reduced} lite={lite} />
 
                 {/* tagline sits low-left — one small editorial accent */}
@@ -224,6 +255,25 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* search — OFFTHE DRUMS jobs, rendered inside the site */}
+      {searchOpen && (
+        <div className="fixed inset-0 z-[120] bg-[#f4f1ea]">
+          <iframe
+            src="/offthedrums/index.html"
+            title="OFF THE DRUMS — recent print jobs"
+            className="h-full w-full border-0"
+          />
+          <button
+            type="button"
+            onClick={closeSearchPage}
+            aria-label="Back to OFFMODE"
+            className="fixed left-4 top-4 z-[121] flex items-center gap-2 rounded-full border border-black/25 bg-[#f4f1ea]/90 px-4 py-2 font-mono text-[10px] font-semibold uppercase tracking-[0.25em] text-black backdrop-blur-md transition-colors hover:bg-[#ffe500] md:left-6 md:top-6"
+          >
+            <span aria-hidden="true">←</span> Back
+          </button>
+        </div>
+      )}
     </div>
   );
 }

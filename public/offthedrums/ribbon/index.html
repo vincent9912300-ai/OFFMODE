@@ -1,0 +1,51 @@
+<!doctype html>
+<!--
+  "The rearing ribbon" from Animorio — https://animorio.com
+  License: free on your own sites and your clients' sites, paid work included.
+  Not for resale, redistribution, templates or code collections — https://animorio.com/en/license/
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OFF THE DRUMS — Recent Jobs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- a tall page: scrolling down moves the ribbon sideways; the script sets the height from the ribbon's length -->
+  <main class="hall" data-hall>
+    <div class="stage" data-stage>
+      <!-- the ribbon and the floor are drawn here -->
+      <canvas class="stage__canvas" data-canvas aria-hidden="true"></canvas>
+
+      <header class="bar">
+        <p class="brand">OFF THE DRUMS</p>
+        <a class="bar__link" href="../index.html">Back to jobs</a>
+      </header>
+
+      <!-- the jobs: the sheets are the cards, these names stay here for whoever cannot see them -->
+      <ul class="rooms" data-rooms>
+        <li><h2>Water of Leith Festival</h2><p>A3 · 170gsm · riso</p></li>
+        <li><h2>Fennick Gallery</h2><p>A2 · 300gsm · print pull</p></li>
+        <li><h2>House Colour</h2><p>412 jobs · drum two</p></li>
+        <li><h2>Saltire Books</h2><p>B5 · poetry</p></li>
+        <li><h2>Ailsa &amp; Tom, Portobello</h2><p>A6 · 600gsm · hand-set</p></li>
+        <li><h2>Granton Darkroom</h2><p>A5 · 32pp · photo zine</p></li>
+        <li><h2>Bow Street Hardware</h2><p>A7 · price cards</p></li>
+        <li><h2>Your Job Next</h2><p>Booking</p></li>
+      </ul>
+
+      <footer class="foot">
+        <p>Recent jobs</p>
+        <p data-hint>Scroll · click a card</p>
+      </footer>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
